@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.002.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TerraNotes", "TerraNotes.csproj", "{AA41E432-64BE-4B6F-A940-B9646A37DFDD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AA41E432-64BE-4B6F-A940-B9646A37DFDD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA41E432-64BE-4B6F-A940-B9646A37DFDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA41E432-64BE-4B6F-A940-B9646A37DFDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA41E432-64BE-4B6F-A940-B9646A37DFDD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {22602CE3-5364-43F1-95E7-935AC3F052D6}
+	EndGlobalSection
+EndGlobal
