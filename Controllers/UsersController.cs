@@ -18,16 +18,9 @@ public class UsersController : ControllerBase
     [ServiceFilter(typeof(APIKeyAuthFilter))]
     public async Task<ActionResult<User>> GetCurrentUser()
     {
-        // Obtain the user from the context
-        var apiKey = HttpContext.Items["APIKey"] as APIKey;
-
-        // Find the user in the database
-        var user = await _context.Users.FindAsync(apiKey!.UserCreatedId);
-        if (user == null)
-        {
-            return NotFound();
-        }
-
-        return user;
+        // Obtain the user from the http context
+        var apiKey = (HttpContext.Items["APIKey"] as APIKey)!;
+        await _context.Entry(apiKey).Reference(a => a.UserCreated).LoadAsync();
+        return apiKey.UserCreated;
     }
 }
