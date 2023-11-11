@@ -13,16 +13,21 @@ public class UsersController : ControllerBase
         _context = context;
     }
 
-    // Get by id, async
-    [HttpGet("{id}")]
+    // This will get the api ket from the http context and use it to find the user
+    [HttpGet("Me")]
     [ServiceFilter(typeof(APIKeyAuthFilter))]
-    public async Task<ActionResult<User>> GetUserById(Guid id)
+    public async Task<ActionResult<User>> GetCurrentUser()
     {
-        var user = await _context.Users.FindAsync(id);
+        // Obtain the user from the context
+        var apiKey = HttpContext.Items["APIKey"] as APIKey;
+
+        // Find the user in the database
+        var user = await _context.Users.FindAsync(apiKey!.UserCreatedId);
         if (user == null)
         {
             return NotFound();
         }
+
         return user;
     }
 }

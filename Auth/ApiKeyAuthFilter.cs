@@ -30,12 +30,22 @@ public class APIKeyAuthFilter : IAsyncAuthorizationFilter
         }
         
         // Find the API key in the database
-        var apiKey = await _context.APIKeys.Include(k => k.UserCreated).FirstOrDefaultAsync(k => k.Key == potentialAPIKeyGuid);
+        var apiKey = await _context.APIKeys.FindAsync(potentialAPIKeyGuid);
         if (apiKey == null)
         {
             context.Result = new UnauthorizedObjectResult("Invalid API Key");
             return;
         }
-        _logger.LogInformation($"API Key {apiKey.Key} used by {apiKey.UserCreated.FirstName}");
+
+        // Check if the API key is active
+        if (apiKey.Status != "active")
+        {
+            context.Result = new UnauthorizedObjectResult("API Key is not active");
+            _logger.LogInformation($"User {apiKey.UserCreatedId} tried to use inactive API key {apiKey.Key}");
+            return;
+        }
+
+        // Since we're using a scoped service, we can add the API key to the context
+        context.HttpContext.Items.Add("APIKey", apiKey);
     }
 }
