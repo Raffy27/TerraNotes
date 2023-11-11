@@ -14,6 +14,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddScoped<APIKeyAuthFilter>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

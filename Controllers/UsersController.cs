@@ -15,6 +15,7 @@ public class UsersController : ControllerBase
 
     // Get by id, async
     [HttpGet("{id}")]
+    [ServiceFilter(typeof(APIKeyAuthFilter))]
     public async Task<ActionResult<User>> GetUserById(Guid id)
     {
         var user = await _context.Users.FindAsync(id);
