@@ -26,6 +26,9 @@ namespace TerraNotes.Models
         [Column("date_updated")]
         public DateTime? DateUpdated { get; set; }
 
+        [Column("input_format")]
+        public string? InputFormat { get; set; }
+
         [Column("title")]
         public string? Title { get; set; }
 

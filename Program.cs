@@ -11,6 +11,10 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("TerraDb")));
 
+// Add background service for processing notes
+builder.Services.AddSingleton<NoteProcessor>();
+builder.Services.AddHostedService<NoteProcessor>(provider => provider.GetRequiredService<NoteProcessor>());
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => {
