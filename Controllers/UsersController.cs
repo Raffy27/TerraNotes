@@ -13,7 +13,7 @@ public class UsersController : ControllerBase
         _context = context;
     }
 
-    // This will get the api ket from the http context and use it to find the user
+    // This will get the API Key from the http context and use it to find the user
     [HttpGet("Me")]
     [ServiceFilter(typeof(APIKeyAuthFilter))]
     public async Task<ActionResult<User>> GetCurrentUser()

@@ -4,13 +4,16 @@ using TerraNotes.Models;
 public class NoteTask 
 {
     private Note note;
-    private readonly List<string> files;
+    private readonly List<TypedFile> files;
+    private readonly string preset;
     private AppDbContext? _context;
+    private ILogger<NoteTask>? _logger;
 
-    public NoteTask(Note note, List<string> files, string pipeline)
+    public NoteTask(Note note, List<TypedFile> files, string preset)
     {
         this.note = note;
         this.files = files;
+        this.preset = preset;
     }
 
     private async Task SetStatus(string status)
@@ -18,31 +21,40 @@ public class NoteTask
         note.Status = status;
         _context!.Notes.Update(note);
         await _context.SaveChangesAsync();
+        _logger!.LogDebug($"Note {note.Id} status set to {status}");
     }
 
-    public async Task Run(CancellationToken cancellationToken, AppDbContext context)
+    public async Task Run(CancellationToken cancellationToken, AppDbContext context, ILogger<NoteTask> logger)
     {
         _context = context;
+        _logger = logger;
 
         try
         {
-            Console.WriteLine($"Processing note {note.Id}");
+            _logger!.LogInformation($"Processing note {note.Id}");
             await SetStatus("running");
-            Console.WriteLine($"Processing note {note.Id} - status set to running");
-            // Delay to simulate processing
-            await Task.Delay(5000, cancellationToken);
-            Console.WriteLine($"Processing note {note.Id} - delay finished");
+
+            // Setup transform pipeline
+            var pipeline = new Pipeline(preset);
+
+            // TODO: Parallelize this
+            string result = "";
+            foreach (var file in files)
+            {
+                string partialResult = await pipeline.Run(file, cancellationToken);
+                result += partialResult;
+            }
+
             await SetStatus("complete");
-            Console.WriteLine($"Processing note {note.Id} - status set to complete");
         }
         finally
         {
             // Delete the files
             foreach (var file in files)
             {
-                File.Delete(file);
+                File.Delete(file.Path);
             }
-            Console.WriteLine($"Processing note {note.Id} - files deleted");
+            _logger!.LogInformation($"Deleted files for note {note.Id}");
         }
     }
 }

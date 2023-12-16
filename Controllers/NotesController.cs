@@ -71,18 +71,18 @@ public class NotesController : ControllerBase
         await _context.SaveChangesAsync();
 
         // Save the files to disk
-        var filePaths = new List<string>();
         var filesDir = Path.Combine(Directory.GetCurrentDirectory(), "Files");
+        var typedFiles = new List<TypedFile>();
         Directory.CreateDirectory(filesDir);
         foreach (var file in files)
         {
             var fileName = $"{Guid.NewGuid()}.{fileType}";
             var filePath = Path.Combine(filesDir, fileName);
-            filePaths.Add(filePath);
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 await file.CopyToAsync(stream);
             }
+            typedFiles.Add(new TypedFile(filePath, fileType!));
         }
 
         // Create the note
@@ -96,7 +96,7 @@ public class NotesController : ControllerBase
         };
 
         // Create the task
-        var task = new NoteTask(note, filePaths, "default");
+        var task = new NoteTask(note, typedFiles, "default");
 
         // Try to submit the task
         if (await _noteProcessor.TrySubmitTask(task))
@@ -106,9 +106,9 @@ public class NotesController : ControllerBase
             await _context.SaveChangesAsync();
         } else {
             // Delete the files and return an error
-            foreach (var file in filePaths)
+            foreach (var file in typedFiles)
             {
-                System.IO.File.Delete(file);
+                System.IO.File.Delete(file.Path);
             }
             return StatusCode(503, "Server is busy");
         }
