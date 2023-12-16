@@ -24,6 +24,14 @@ public class NoteTask
         _logger!.LogDebug($"Note {note.Id} status set to {status}");
     }
 
+    public async Task SetContent(string content)
+    {
+        note.Content = content;
+        _context!.Notes.Update(note);
+        await _context.SaveChangesAsync();
+        _logger!.LogDebug($"Note {note.Id} content set");
+    }
+
     public async Task Run(CancellationToken cancellationToken, AppDbContext context, ILogger<NoteTask> logger)
     {
         _context = context;
@@ -45,7 +53,13 @@ public class NoteTask
                 result += partialResult;
             }
 
+            await SetContent(result);
             await SetStatus("complete");
+        }
+        catch (Exception e)
+        {
+            _logger!.LogError($"Error processing note {note.Id}: {e}");
+            await SetStatus("failed");
         }
         finally
         {

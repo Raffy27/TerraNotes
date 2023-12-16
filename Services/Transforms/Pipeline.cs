@@ -9,6 +9,9 @@ public class Pipeline
         transforms = new List<ITransform>();
 
         switch (preset) {
+            case "default":
+                AddTransform(new FileToText());
+                break;
             default:
                 throw new Exception($"Unknown pipeline preset {preset}");
         }
@@ -22,6 +25,11 @@ public class Pipeline
     public async Task<string> Run(TypedFile input, CancellationToken cancellationToken)
     {
         string? payload = null;
+
+        if (transforms.Count == 0)
+        {
+            throw new Exception("No transforms in pipeline");
+        }
 
         foreach (var transform in transforms)
         {
