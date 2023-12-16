@@ -13,7 +13,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Add background service for processing notes
 builder.Services.AddSingleton<NoteProcessor>();
-builder.Services.AddHostedService<NoteProcessor>(provider => provider.GetRequiredService<NoteProcessor>());
+builder.Services.AddHostedService(provider => provider.GetRequiredService<NoteProcessor>());
+
+builder.Services.AddSingleton(provider => new RocketVision(
+    builder.Configuration["RocketVision:ApiKey"]!,
+    builder.Configuration["RocketVision:Email"]!,
+    builder.Configuration["RocketVision:Password"]!,
+    provider.GetRequiredService<ILogger<RocketVision>>()
+));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

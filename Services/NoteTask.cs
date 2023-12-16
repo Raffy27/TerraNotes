@@ -8,6 +8,7 @@ public class NoteTask
     private readonly string preset;
     private AppDbContext? _context;
     private ILogger<NoteTask>? _logger;
+    private RocketVision? _rocketVision;
 
     public NoteTask(Note note, List<TypedFile> files, string preset)
     {
@@ -32,9 +33,10 @@ public class NoteTask
         _logger!.LogDebug($"Note {note.Id} content set");
     }
 
-    public async Task Run(CancellationToken cancellationToken, AppDbContext context, ILogger<NoteTask> logger)
+    public async Task Run(CancellationToken cancellationToken, AppDbContext context, RocketVision rocketVision, ILogger<NoteTask> logger)
     {
         _context = context;
+        _rocketVision = rocketVision;
         _logger = logger;
 
         try
@@ -43,7 +45,7 @@ public class NoteTask
             await SetStatus("running");
 
             // Setup transform pipeline
-            var pipeline = new Pipeline(preset);
+            var pipeline = new Pipeline(preset, rocketVision);
 
             // TODO: Parallelize this
             string result = "";

@@ -5,17 +5,32 @@ public class FileToText : IFileToTextTransform
 {
     public string Name => "FileToText";
 
+    private readonly RocketVision _rocketVision;
+
+    public FileToText(RocketVision rocketVision)
+    {
+        _rocketVision = rocketVision;
+    }
+
     public async Task<string> Transform(TypedFile file, CancellationToken cancellationToken)
     {
         string? result = null;
 
         switch (file.Type) {
-            case "pdf":
+            case "pdf": {
                 result = await ExtractTextFromPdf(file.Path, cancellationToken);
                 if (result == null) {
                     throw new Exception($"Error extracting text from PDF {file.Path}");
                 }
-                break;
+            } break;
+            case "jpg": {
+                var baseName = Path.GetFileName(file.Path);
+                await _rocketVision.UploadFile(file.Path);
+                result = await _rocketVision.TranscribeFile(baseName);
+                if (result == null) {
+                    throw new Exception($"Error transcribing image {file.Path}");
+                }
+            } break;
         }
 
         return result!;

@@ -14,12 +14,14 @@ public class RocketVision
     private string? refreshToken;
 
     private string firebaseApiKey;
-    private readonly Logger<RocketVision> _logger;
+    private readonly ILogger<RocketVision> _logger;
 
-    public RocketVision(string firebaseApiKey, Logger<RocketVision> logger)
+    public RocketVision(string firebaseApiKey, string email, string password, ILogger<RocketVision> logger)
     {
         this.firebaseApiKey = firebaseApiKey;
         _logger = logger;
+
+        Authenticate(email, password).Wait();
     }
 
     private async Task Login(string email, string password)
@@ -133,8 +135,10 @@ public class RocketVision
     public async Task Authenticate(string email, string password)
     {
         await Login(email, password);
+        _logger.LogInformation($"Logged in as {name} ({user})");
         await CastToken();
         await GetSecureJWT();
+        _logger.LogInformation("Authenticated with Firebase");
     }
 
     private async Task<string> GetUploadUrl(string fileName)
@@ -179,7 +183,8 @@ public class RocketVision
             throw new Exception("Secure JWT is empty");
         }
 
-        var uploadUrl = await GetUploadUrl(fileName);
+        var baseName = Path.GetFileName(fileName);
+        var uploadUrl = await GetUploadUrl(baseName);
 
         // Get file size and a reader
         var fileInfo = new FileInfo(fileName);

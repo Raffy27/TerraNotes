@@ -4,13 +4,13 @@ public class Pipeline
 {
     private readonly List<ITransform> transforms;
 
-    public Pipeline(string preset)
+    public Pipeline(string preset, RocketVision rocketVision)
     {
         transforms = new List<ITransform>();
 
         switch (preset) {
             case "default":
-                AddTransform(new FileToText());
+                AddTransform(new FileToText(rocketVision));
                 break;
             default:
                 throw new Exception($"Unknown pipeline preset {preset}");

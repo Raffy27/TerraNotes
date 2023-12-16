@@ -41,13 +41,14 @@ public class NoteProcessor : BackgroundService, IDisposable
 
             var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var rocketVision = scope.ServiceProvider.GetRequiredService<RocketVision>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<NoteTask>>();
             _logger.LogInformation("Note processor got database context");
             // Start the task as a background task
             _ = Task.Run(async () =>
             {
                 _logger.LogInformation("Inside of the task that was started asynchronously");
-                await task.Run(stoppingToken, context, logger);
+                await task.Run(stoppingToken, context, rocketVision, logger);
                 _logger.LogInformation("Note processor finished task");
                 scope.Dispose();
                 semaphore.Release();
