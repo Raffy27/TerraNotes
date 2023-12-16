@@ -4,22 +4,31 @@ using System.Text.Json;
 
 public class RocketVision
 {
-    private string user;
-    private string email;
-    private string name;
-    private string userId;
-    private string sessionToken;
-    private string firebaseJWT;
-    private string secureJWT;
-    private string refreshToken;
+    private string? user;
+    private string? email;
+    private string? name;
+    private string? userId;
+    private string? sessionToken;
+    private string? firebaseJWT;
+    private string? secureJWT;
+    private string? refreshToken;
 
-    public async Task Login(string email, string password)
+    private string firebaseApiKey;
+    private readonly Logger<RocketVision> _logger;
+
+    public RocketVision(string firebaseApiKey, Logger<RocketVision> logger)
+    {
+        this.firebaseApiKey = firebaseApiKey;
+        _logger = logger;
+    }
+
+    private async Task Login(string email, string password)
     {
         var loginData = new
         {
-            Username = email,
-            Password = password,
-            Method = "GET"
+            username = email,
+            password,
+            method = "GET"
         };
         var body = JsonSerializer.Serialize(loginData);
 
@@ -47,15 +56,26 @@ public class RocketVision
             throw new Exception("Failed to parse login response");
         }
 
-        user = (data["username"] as string)!;
-        name = (data["name"] as string)!;
-        userId = (data["objectId"] as string)!;
-        sessionToken = (data["sessionToken"] as string)!;
+        user = data["username"].ToString();
+        name = data["name"].ToString();
+        this.email = data["email"].ToString();
+        userId = data["objectId"].ToString();
+        sessionToken = data["sessionToken"].ToString();
     }
 
-    public async Task CastToken()
+    private async Task CastToken()
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, "https://api.getrocketbook.com/cast/" + userId + "/token");
+        if (sessionToken == null || sessionToken == "")
+        {
+            throw new Exception("Session token is empty");
+        }
+        if (userId == null || userId == "")
+        {
+            throw new Exception("User ID is empty");
+        }
+
+        var safeUserId = WebUtility.UrlEncode(userId);
+        var request = new HttpRequestMessage(HttpMethod.Get, "https://api.getrocketbook.com/cast/" + safeUserId + "/token");
         request.Headers.Add("Authorization", "Bearer " + sessionToken);
         request.Headers.Add("User-Agent", "Google-HTTP-Java-Client/1.42.3 (gzip)");
 
@@ -72,10 +92,19 @@ public class RocketVision
         firebaseJWT = body.Trim('"');
     }
 
-    public async Task GetSecureJWT()
+    private async Task GetSecureJWT()
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyCustomToken?key=" + apiKey);
-        request.Headers.Add("Content-Type", "application/json");
+        var payloadObject = new
+        {
+            token = firebaseJWT,
+            returnSecureToken = true
+        };
+        var payload = JsonSerializer.Serialize(payloadObject);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyCustomToken?key=" + firebaseApiKey)
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
         request.Headers.Add("X-Android-Package", "com.rb.rocketbook");
         request.Headers.Add("X-Android-Cert", "5D08264B44E0E53FBCCC70B4F016474CC6C5AB5C");
         request.Headers.Add("Accept-Language", "en-US");
@@ -97,19 +126,26 @@ public class RocketVision
         }
 
         // Save secure token and other useful data
-        secureJWT = (data["idToken"] as string)!;
-        refreshToken = (data["refreshToken"] as string)!;
+        secureJWT = data["idToken"].ToString();
+        refreshToken = data["refreshToken"].ToString();
     }
 
-    private async Task<string> GetUploadUrl(string fileName) {
+    public async Task Authenticate(string email, string password)
+    {
+        await Login(email, password);
+        await CastToken();
+        await GetSecureJWT();
+    }
+
+    private async Task<string> GetUploadUrl(string fileName)
+    {
         var urlencodedFilename = WebUtility.UrlEncode(userId + "/" + fileName);
 
-        var payload = new StringContent("{}", Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, "https://firebasestorage.googleapis.com/v0/b/rocket-vision/o?" +
             "name=" + urlencodedFilename + "&" +
             "uploadType=resumable")
         {
-            Content = payload
+            Content = new StringContent("{}", Encoding.UTF8, "application/json")
         };
         request.Headers.Add("Authorization", "Firebase " + secureJWT);
         request.Headers.Add("X-Firebase-Storage-Version", "Android/23.11.15 (190400-520109968)");
@@ -117,7 +153,6 @@ public class RocketVision
         request.Headers.Add("X-Goog-Upload-Command", "start");
         request.Headers.Add("X-Goog-Upload-Protocol", "resumable");
         request.Headers.Add("X-Goog-Upload-Header-Content-Type", "application/octet-stream");
-        request.Headers.Add("Content-Type", "application/json");
         request.Headers.Add("User-Agent", "Dalvik/2.1.0 (Linux; U; Android 13; 21081111RG Build/TP1A.220624.014)");
         request.Content.Headers.ContentLength = 2;
 
@@ -137,5 +172,88 @@ public class RocketVision
         return uploadUrl;
     }
 
-    
+    public async Task UploadFile(string fileName)
+    {
+        if (secureJWT == null || secureJWT == "")
+        {
+            throw new Exception("Secure JWT is empty");
+        }
+
+        var uploadUrl = await GetUploadUrl(fileName);
+
+        // Get file size and a reader
+        var fileInfo = new FileInfo(fileName);
+        var fileSize = fileInfo.Length;
+        var payload = new FileStream(fileName, FileMode.Open);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, uploadUrl)
+        {
+            Content = new StreamContent(payload)
+        };
+        request.Headers.Add("Authorization", "Firebase " + secureJWT);
+        request.Headers.Add("X-Firebase-Storage-Version", "Android/23.11.15 (190400-520109968)");
+        request.Headers.Add("x-firebase-gmpid", "1:807535467202:android:71029d5975dd1c05");
+        request.Headers.Add("X-Goog-Upload-Command", "upload, finalize");
+        request.Headers.Add("X-Goog-Upload-Protocol", "resumable");
+        request.Headers.Add("X-Goog-Upload-Offset", "0");
+        request.Headers.Add("User-Agent", "Dalvik/2.1.0 (Linux; U; Android 13; 21081111RG Build/TP1A.220624.014)");
+        // This bit is very important, otherwise Transfer-Encoding defaults to chunked
+        request.Content.Headers.ContentLength = fileSize;
+
+        var client = new HttpClient();
+        var response = await client.SendAsync(request);
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            throw new Exception($"Upload file failed with status code {response.StatusCode}");
+        }
+
+        // Parse JSON response
+        var data = JsonSerializer.Deserialize<Dictionary<string, object>>(await response.Content.ReadAsStringAsync());
+        if (data == null)
+        {
+            throw new Exception("Failed to parse upload file response");
+        }
+    }
+
+    public async Task<string> TranscribeFile(string fileName)
+    {
+        var originalFilenames = new string[] { fileName };
+        var originalFilenamesJsonUrlEncoded = WebUtility.UrlEncode(JsonSerializer.Serialize(originalFilenames));
+        var urlencodedEmail = WebUtility.UrlEncode(email);
+        var payload = new StringContent("userId=" + userId + "&" +
+            "email=" + urlencodedEmail + "&" +
+            "searchable=true&" +
+            "os=android&" +
+            "ocrPageTitle=true&" +
+            "originalFilenames=" + originalFilenamesJsonUrlEncoded, Encoding.UTF8, "application/x-www-form-urlencoded");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "https://api.getrocketbook.com/scans/transcribe")
+        {
+            Content = payload
+        };
+        request.Headers.Add("Authorization", "Bearer " + sessionToken);
+        request.Headers.Add("User-Agent", "Google-HTTP-Java-Client/1.42.3 (gzip)");
+
+        var client = new HttpClient();
+        var response = await client.SendAsync(request);
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            throw new Exception($"Transcribe file failed with status code {response.StatusCode}");
+        }
+
+        // Parse JSON responseint a dynamic array
+        var data = JsonSerializer.Deserialize<Dictionary<string, object>[]>(await response.Content.ReadAsStringAsync());
+        if (data == null)
+        {
+            throw new Exception("Failed to parse transcribe file response");
+        }
+
+        string text = "";
+        foreach (var page in data)
+        {
+            text += page["description"].ToString();
+        }
+
+        return text;
+    }
 }
