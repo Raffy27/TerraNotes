@@ -16,21 +16,53 @@ public class FileToText : IFileToTextTransform
     {
         string? result = null;
 
-        switch (file.Type) {
-            case "pdf": {
-                result = await ExtractTextFromPdf(file.Path, cancellationToken);
-                if (result == null) {
-                    throw new Exception($"Error extracting text from PDF {file.Path}");
+        switch (file.Type)
+        {
+            case "pdf":
+                {
+                    result = await ExtractTextFromPdf(file.Path, cancellationToken);
+                    if (result != null)
+                    {
+                        return result;
+                    }
+
+                    // Fallback: convert to images and transcribe
+                    var images = await ConvertPdfToImages(file.Path, cancellationToken);
+                    try
+                    {
+                        foreach (var image in images)
+                        {
+                            result = await PerformOcr(image, cancellationToken);
+                            if (result == null)
+                            {
+                                throw new Exception($"Error extracting text from PDF {file.Path}");
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                    finally
+                    {
+                        // Delete the images
+                        foreach (var image in images)
+                        {
+                            File.Delete(image);
+                        }
+                    }
                 }
-            } break;
-            case "jpg": {
-                var baseName = Path.GetFileName(file.Path);
-                await _rocketVision.UploadFile(file.Path);
-                result = await _rocketVision.TranscribeFile(baseName);
-                if (result == null) {
-                    throw new Exception($"Error transcribing image {file.Path}");
+                break;
+            case "png":
+            case "jpg":
+                {
+                    result = await PerformOcr(file.Path, cancellationToken);
+                    if (result == null)
+                    {
+                        throw new Exception($"Error transcribing image {file.Path}");
+                    }
                 }
-            } break;
+                break;
         }
 
         return result!;
@@ -56,7 +88,7 @@ public class FileToText : IFileToTextTransform
         }
 
         string? stdout = await process.StandardOutput.ReadToEndAsync();
-        process.WaitForExit();
+        await process.WaitForExitAsync();
 
         if (process.ExitCode != 0)
         {
@@ -72,5 +104,41 @@ public class FileToText : IFileToTextTransform
             return null;
         }
         return stdout;
+    }
+
+    private async Task<string[]> ConvertPdfToImages(string path, CancellationToken cancellationToken)
+    {
+        // Create a process and read the output: pdftoppm -jpeg <path> <basepath>/<basenameNoExt>
+        var process = new Process();
+        process.StartInfo.FileName = "pdftoppm";
+        process.StartInfo.Arguments = $"-jpeg {path} {Path.Combine(Path.GetDirectoryName(path)!, Path.GetFileNameWithoutExtension(path))}";
+        process.StartInfo.UseShellExecute = false;
+        process.StartInfo.CreateNoWindow = true;
+
+        try
+        {
+            process.Start();
+        }
+        catch (Exception e)
+        {
+            throw new Exception($"Error starting pdftoppm process: {e.Message}");
+        }
+
+        await process.WaitForExitAsync();
+        if (process.ExitCode != 0)
+        {
+            throw new Exception($"pdftoppm failed with exit code {process.ExitCode}");
+        }
+
+        // Get the list of files
+        var files = Directory.GetFiles(Path.GetDirectoryName(path)!, $"{Path.GetFileNameWithoutExtension(path)}*.jpg");
+        return files;
+    }
+
+    private async Task<string?> PerformOcr(string path, CancellationToken cancellationToken)
+    {
+        var baseName = Path.GetFileName(path);
+        await _rocketVision.UploadFile(path);
+        return await _rocketVision.TranscribeFile(baseName);
     }
 }
