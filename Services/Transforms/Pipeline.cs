@@ -11,6 +11,7 @@ public class Pipeline
         switch (preset) {
             case "default":
                 AddTransform(new FileToText(rocketVision));
+                AddTransform(new Markdown());
                 break;
             default:
                 throw new Exception($"Unknown pipeline preset {preset}");
