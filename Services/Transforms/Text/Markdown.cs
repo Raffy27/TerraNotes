@@ -9,7 +9,7 @@ public class Markdown : ITextToTextTransform
 
     public async Task<string> Transform(string text, CancellationToken cancellationToken)
     {
-        var completion = ChatCompletionFactory.Instance.Create("gpt-4", "Bing")
+        var completion = ChatCompletionFactory.Instance.Create("gpt-3.5-turbo", null)
             .WithMessage(
                 ChatCompletion.Role.System,
                 "You are a text transformer. " +

@@ -46,6 +46,12 @@ public class Pipeline
             {
                 throw new Exception($"Unknown transform type {transform.GetType()}");
             }
+
+            if (payload == null || payload == "")
+            {
+                // Fail fast
+                break;
+            }
         }
 
         return payload!;

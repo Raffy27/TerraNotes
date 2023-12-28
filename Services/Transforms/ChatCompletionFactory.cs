@@ -37,7 +37,7 @@ public sealed class ChatCompletionFactory
         return validModels.Contains(model);
     }
 
-    public ChatCompletion Create(string model, string provider)
+    public ChatCompletion Create(string model, string? provider)
     {
         if (!ModelExists(model))
         {

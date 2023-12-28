@@ -41,6 +41,7 @@ function submit() {
     flex-direction: column;
     justify-content: center;
     row-gap: 1rem;
+    width: 27rem;
 }
 
 .hint {

@@ -23,11 +23,11 @@ public class ChatCompletion
 
     private readonly string apiUrl;
     private readonly string model;
-    private readonly string provider;
+    private readonly string? provider;
     private readonly float temperature;
     private readonly List<Message> messages = new();
 
-    public ChatCompletion(string apiUrl, string model, string provider, float temperature)
+    public ChatCompletion(string apiUrl, string model, string? provider, float temperature)
     {
         this.apiUrl = apiUrl;
         this.model = model;

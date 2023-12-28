@@ -17,10 +17,32 @@ public class NotesController : ControllerBase
         _noteProcessor = noteProcessor;
     }
 
-    [HttpGet("{{id}}")]
+    [HttpOptions]
+    public IActionResult Options()
+    {
+        Response.Headers.Add("Access-Control-Allow-Origin", "*");
+        Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, X-Api-Key");
+        return Ok();
+    }
+
+    [HttpOptions("{id}")]
+    public IActionResult Options(int id)
+    {
+        Response.Headers.Add("Access-Control-Allow-Origin", "*");
+        Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, X-Api-Key");
+        return Ok();
+    }
+
+    [HttpGet("{id}")]
     [ServiceFilter(typeof(APIKeyAuthFilter))]
     public async Task<ActionResult<Note>> GetNoteById(int id)
     {
+        Response.Headers.Add("Access-Control-Allow-Origin", "*");
+        Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, X-Api-Key");
+
         var note = await _context.Notes.FindAsync(id);
         if (note == null)
         {
@@ -34,6 +56,10 @@ public class NotesController : ControllerBase
     [ServiceFilter(typeof(APIKeyAuthFilter))]
     public async Task<ActionResult<Note>> CreateNote(List<IFormFile> files)
     {
+        Response.Headers.Add("Access-Control-Allow-Origin", "*");
+        Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, X-Api-Key");
+        
         var apiKey = (HttpContext.Items["APIKey"] as APIKey)!;
 
         // Check if there are enough uses left
