@@ -9,9 +9,15 @@ public class Markdown : ITextToTextTransform
 
     public async Task<string> Transform(string text, CancellationToken cancellationToken)
     {
-        const string instr = "You are a text transformer. You are given input text and you must convert it to markdown using the necessary formatting. Then you must write the result to the output, and only the result.";
-        var output = await LLama.Instance.Prompt(instr, text);
-        Console.WriteLine("LLama output: " + output);
-        return output;
+        var completion = ChatCompletionFactory.Instance.Create("gpt-4", "Bing")
+            .WithMessage(
+                ChatCompletion.Role.System,
+                "You are a text transformer. " +
+                "You repeat the messages given to you, but with contextual markdown formatting applied to them. " +
+                "You don't need to introduce or explain your responses, just provide the result of the transformation."
+            )
+            .WithMessage(ChatCompletion.Role.User, text);
+        
+        return await completion.Complete(cancellationToken);
     }
 }

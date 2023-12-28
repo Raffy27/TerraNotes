@@ -8,10 +8,16 @@ public class PascalCase : ITextToTextTransform
     }
 
     public async Task<string> Transform(string text, CancellationToken cancellationToken)
-    {
-        const string instr = "You are a text transformer. You are given input text and you must capitalize the first letter of every word, then write it to the output. Write nothing else to the output but the resulting text.";
-        var output = await LLama.Instance.Prompt(instr, text);
-        Console.WriteLine("LLama output: " + output);
-        return output;
+    { 
+        var completion = ChatCompletionFactory.Instance.Create("gpt-4", "Bing")
+            .WithMessage(
+                ChatCompletion.Role.System,
+                "You are a text transformer. " +
+                "You repeat the same messages that are given to you, but with all the words transformed to PascalCase. " +
+                "You don't need to introduce or explain your responses, just provide the result of the transformation."
+            )
+            .WithMessage(ChatCompletion.Role.User, text);
+        
+        return await completion.Complete(cancellationToken);
     }
 }
