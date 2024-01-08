@@ -21,8 +21,15 @@
             <p>{{ displayStatus }}</p>
           </div>
           <div class="content" v-else-if="content">
-            <pre>{{ content }}</pre>
-            <Button @click="content = null" label="Back" />
+            <template v-if="!renderedContent">
+              <pre v-if="!renderedContent">{{ content }}</pre>
+              <hr />
+            </template>
+            <div v-html="renderedContent" />
+            <div class="action-buttons">
+              <Button @click="copy" label="Copy" />
+              <Button @click="content = null" label="Back" />
+            </div>
           </div>
           <UploadForm v-else @submit="formSubmit" />
         </Transition>
@@ -38,6 +45,7 @@ import ProgressSpinner from 'primevue/progressspinner';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
 import { computed, ref } from 'vue';
+import { marked } from 'marked';
 
 const toast = useToast();
 
@@ -46,6 +54,8 @@ const errorMessage = ref<string>('');
 const progressShown = ref<boolean>(false);
 const status = ref<string | null>(null);
 const content = ref<string | null>(null);
+
+const renderedContent = ref<string | null>();
 
 let pollInterval: number | null = null;
 
@@ -123,7 +133,13 @@ async function poll(apiKey: string, id: number) {
       status.value = data.status;
       if (data.status === 'complete') {
         progressShown.value = false;
+        renderedContent.value = null;
         content.value = data.content;
+        try {
+          renderedContent.value = await marked.parse(data.content);
+        } catch (error) {
+          renderedContent.value = null;
+        }
         clearInterval(pollInterval!);
         pollInterval = null;
       }
@@ -141,9 +157,34 @@ async function poll(apiKey: string, id: number) {
     }
   }
 }
+
+async function copy() {
+  try {
+    await navigator.clipboard.writeText(content.value!);
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Copied to clipboard.',
+      life: 3000,
+    });
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to copy to clipboard.',
+      life: 3000,
+    });
+  }
+}
 </script>
 
 <style scoped>
+.content {
+  width: 100%;
+  background-color: #222;
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+}
 .column {
   display: flex;
   flex-direction: column;
@@ -207,8 +248,31 @@ async function poll(apiKey: string, id: number) {
   row-gap: 1rem;
 }
 
-.constrainted-column {
-  max-width: 28rem;
-  overflow: auto;
+.action-buttons {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  column-gap: 1rem;
+  margin-top: 2rem;
+}
+
+hr {
+  background: #999;
+}
+
+.constrained-column {
+  width: 70%;
+  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* media query, for small screens the constrained column will be 100% width */
+@media (max-width: 600px) {
+  .constrained-column {
+    width: 100%;
+  }
 }
 </style>

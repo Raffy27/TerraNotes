@@ -126,7 +126,7 @@ public class RocketVision : IDisposable
         var body = await response.Content.ReadAsStringAsync();
         // Remove quotes from string
         firebaseJWT = body.Trim('"');
-        _logger.LogInformation($"Firebase JWT: {firebaseJWT}");
+        _logger.LogDebug($"Firebase JWT: {firebaseJWT}");
     }
 
     private async Task GetSecureJWT()
