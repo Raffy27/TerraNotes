@@ -22,7 +22,7 @@ public class NoteTask
         note.Status = status;
         _context!.Notes.Update(note);
         await _context.SaveChangesAsync();
-        _logger!.LogDebug($"Note {note.Id} status set to {status}");
+        _logger!.LogInformation($"Note {note.Id} status set to {status}");
     }
 
     public async Task SetContent(string content)
@@ -30,7 +30,7 @@ public class NoteTask
         note.Content = content;
         _context!.Notes.Update(note);
         await _context.SaveChangesAsync();
-        _logger!.LogDebug($"Note {note.Id} content set");
+        _logger!.LogInformation($"Note {note.Id} content set");
     }
 
     public async Task Run(CancellationToken cancellationToken, AppDbContext context, RocketVision rocketVision, ILogger<NoteTask> logger)
@@ -42,6 +42,10 @@ public class NoteTask
         try
         {
             _logger!.LogInformation($"Processing note {note.Id}");
+            while (note.Id == 0) {
+                _logger!.LogInformation($"Note {note.Id} is not ready yet");
+                await Task.Delay(100);
+            }
             await SetStatus("running");
 
             // Setup transform pipeline
@@ -52,7 +56,7 @@ public class NoteTask
             foreach (var file in files)
             {
                 string partialResult = await pipeline.Run(file, cancellationToken);
-                result += partialResult;
+                result += partialResult + "\n";
             }
 
             await SetContent(result);

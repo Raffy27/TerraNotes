@@ -130,6 +130,7 @@ public class NotesController : ControllerBase
             // Actually save the note to the database
             _context.Notes.Add(note);
             await _context.SaveChangesAsync();
+            _logger.LogInformation($"Note {note.Id} created");
         } else {
             // Delete the files and return an error
             foreach (var file in typedFiles)

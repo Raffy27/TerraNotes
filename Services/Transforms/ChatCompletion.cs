@@ -43,22 +43,27 @@ public class ChatCompletion
 
     public async Task<string> Complete(CancellationToken cancellationToken)
     {
-        var requestParams = new {
+        dynamic requestParams = new {
             model,
             messages,
-            provider,
             temperature
         };
+        if (provider != null)
+        {
+            requestParams.provider = provider;
+        }
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"{apiUrl}/chat/completions") {
             Content = new StringContent(JsonSerializer.Serialize(requestParams), Encoding.UTF8, "application/json")
         };
+        Console.WriteLine(JsonSerializer.Serialize(requestParams));
 
         var client = new HttpClient() {
             Timeout = TimeSpan.FromMilliseconds(Timeout.Infinite)
         };
         var response = await client.SendAsync(request, cancellationToken);
         var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+        Console.WriteLine(responseContent);
 
         // Deserialize the response
         var responseJson = JsonSerializer.Deserialize<Dictionary<string, object>>(responseContent)!;

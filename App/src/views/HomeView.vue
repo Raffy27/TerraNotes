@@ -10,21 +10,23 @@
 
       <p>To get started, enter your API key and upload your files.</p>
 
-      <Transition name="fade" mode="out-in">
-        <div class="error" v-if="errorShown">
-          <p>{{ errorMessage }}</p>
-          <Button @click="errorShown = false; progressShown = false" label="Back" />
-        </div>
-        <div class="progress" v-else-if="progressShown">
-          <ProgressSpinner stroke-width="3" />
-          <p>{{ displayStatus }}</p>
-        </div>
-        <div class="content" v-else-if="content">
-          <pre>{{ content }}</pre>
-          <Button @click="content = null" label="Back" />
-        </div>
-        <UploadForm v-else @submit="formSubmit" />
-      </Transition>
+      <div class="constrained-column">
+        <Transition name="fade" mode="out-in">
+          <div class="error" v-if="errorShown">
+            <p>{{ errorMessage }}</p>
+            <Button @click="errorShown = false; progressShown = false" label="Back" />
+          </div>
+          <div class="progress" v-else-if="progressShown">
+            <ProgressSpinner stroke-width="3" />
+            <p>{{ displayStatus }}</p>
+          </div>
+          <div class="content" v-else-if="content">
+            <pre>{{ content }}</pre>
+            <Button @click="content = null" label="Back" />
+          </div>
+          <UploadForm v-else @submit="formSubmit" />
+        </Transition>
+      </div>
     </div>
   </main>
 </template>
@@ -81,7 +83,7 @@ async function transformFiles(apiKey: string, files: File[]) {
   progressShown.value = true;
 
   try {
-    const response = await fetch('http://localhost:5268/api/Notes', {
+    const response = await fetch('/api/Notes', {
       method: 'POST',
       headers: {
         'X-Api-Key': apiKey,
@@ -106,7 +108,7 @@ async function transformFiles(apiKey: string, files: File[]) {
 async function poll(apiKey: string, id: number) {
   if (progressShown.value) {
     try {
-      const response = await fetch(`http://localhost:5268/api/Notes/${id}`, {
+      const response = await fetch(`/api/Notes/${id}`, {
         method: 'GET',
         headers: {
           'X-Api-Key': apiKey,
@@ -122,6 +124,12 @@ async function poll(apiKey: string, id: number) {
       if (data.status === 'complete') {
         progressShown.value = false;
         content.value = data.content;
+        clearInterval(pollInterval!);
+        pollInterval = null;
+      }
+      if (data.status === 'failed') {
+        errorShown.value = true;
+        errorMessage.value = 'Failed to transform your files.';
         clearInterval(pollInterval!);
         pollInterval = null;
       }
@@ -197,5 +205,10 @@ async function poll(apiKey: string, id: number) {
   align-items: center;
   justify-content: center;
   row-gap: 1rem;
+}
+
+.constrainted-column {
+  max-width: 28rem;
+  overflow: auto;
 }
 </style>
