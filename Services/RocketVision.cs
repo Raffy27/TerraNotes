@@ -2,7 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 
-public class RocketVision
+public class RocketVision : IDisposable
 {
     private string? user;
     private string? email;
@@ -15,6 +15,7 @@ public class RocketVision
 
     private string firebaseApiKey;
     private readonly ILogger<RocketVision> _logger;
+    private Timer? refreshTimer;
 
     public RocketVision(string firebaseApiKey, string email, string password, ILogger<RocketVision> logger)
     {
@@ -22,6 +23,39 @@ public class RocketVision
         _logger = logger;
 
         Authenticate(email, password).Wait();
+
+        MountRefreshTimer(email, password);
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Dispose();
+    }
+
+    private void MountRefreshTimer(string email, string password) {
+        if (firebaseJWT == null || firebaseJWT == "")
+        {
+            throw new Exception("Firebase JWT is empty");
+        }
+
+        // Decode the token to get the expiration date
+        var base64Payload = firebaseJWT!.Split('.')[1];
+        var payload = Encoding.UTF8.GetString(Convert.FromBase64String(base64Payload));
+        var payloadObject = JsonSerializer.Deserialize<Dictionary<string, object>>(payload);
+        if (payloadObject == null)
+        {
+            throw new Exception("Failed to parse Firebase JWT payload");
+        }
+        var expiration = DateTimeOffset.FromUnixTimeSeconds(long.Parse(payloadObject["exp"].ToString() ?? "0"));
+        if (expiration < DateTimeOffset.Now)
+        {
+            throw new Exception("Firebase JWT has already expired?");
+        }
+
+        // Schedule a refresh to 1 minute before the expiration date
+        var refreshTime = expiration.AddMinutes(-1);
+        _logger.LogInformation($"Scheduling next refresh at {refreshTime} ({(refreshTime - DateTimeOffset.Now).TotalMinutes} minutes from now)");
+        refreshTimer = new Timer(async _ => await Authenticate(email, password), null, refreshTime - DateTimeOffset.Now, TimeSpan.FromMilliseconds(-1));
     }
 
     private async Task Login(string email, string password)
@@ -92,6 +126,7 @@ public class RocketVision
         var body = await response.Content.ReadAsStringAsync();
         // Remove quotes from string
         firebaseJWT = body.Trim('"');
+        _logger.LogInformation($"Firebase JWT: {firebaseJWT}");
     }
 
     private async Task GetSecureJWT()
@@ -130,6 +165,8 @@ public class RocketVision
         // Save secure token and other useful data
         secureJWT = data["idToken"].ToString();
         refreshToken = data["refreshToken"].ToString();
+        _logger.LogDebug($"Secure JWT: {secureJWT}");
+        _logger.LogDebug($"Refresh token: {refreshToken}");
     }
 
     public async Task Authenticate(string email, string password)
