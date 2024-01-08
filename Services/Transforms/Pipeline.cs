@@ -12,6 +12,7 @@ public class Pipeline
             case "default":
                 AddTransform(new FileToText(rocketVision));
                 AddTransform(new Markdown());
+                AddTransform(new NormalizeAI());
                 break;
             default:
                 throw new Exception($"Unknown pipeline preset {preset}");
